@@ -1,0 +1,45 @@
+units metal
+dimension 3
+boundary p p p
+atom_style atomic
+
+variable   a equal 4.05
+variable   k   loop  6
+variable temperature equal 100*(${k})
+
+log T_${temperature}.txt
+
+lattice fcc $a orient x 1 0 0 orient y 0 1 0 orient z 0 0 1
+region box block 0.0 5.0 0.0 5.0 0.0 5.0
+create_box 1 box
+create_atoms 1 box
+
+pair_style eam/alloy
+pair_coeff * * Al99.eam.alloy Al
+neighbor 1.0 bin
+
+compute eng all pe/atom
+compute eatoms all reduce sum c_eng
+compute new all temp
+
+thermo 500
+thermo_style custom step pe ke etotal lx ly lz temp press pxx pyy pzz c_eatoms
+
+dump 1 all cfg 1000 Al_fcc.*.cfg mass type xs ys zs
+dump_modify 1 element Al
+
+velocity  all create   0.01 122345 dist gaussian
+fix 1 all npt temp ${temperature} ${temperature} 0.1 iso 0 0 1.0 
+
+run 40000
+
+variable E equal "c_eatoms"
+variable N equal count(all)
+variable E_cohesive equal ${E}/${N}
+variable lxx equal "lx"
+variable lyy equal "ly"
+variable lzz equal "lz"
+
+clear
+next   k
+jump   fccAl_lat_T.txt

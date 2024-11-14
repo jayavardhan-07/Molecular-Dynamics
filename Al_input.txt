@@ -1,0 +1,39 @@
+units metal
+dimension 3
+boundary p p p
+atom_style atomic
+
+variable k loop 21
+variable   a equal  4.039+0.001*$k
+
+lattice fcc $a orient x 1 0 0 orient y 0 1 0 orient z 0 0 1
+region box block 0.0 10.0 0.0 10.0 0.0 10.0
+create_box 1 box
+create_atoms 1 box
+
+pair_style eam/alloy
+pair_coeff * * Al99.eam.alloy Al
+neighbor 2.0 bin
+
+compute eng all pe/atom
+compute eatoms all reduce sum c_eng
+
+thermo 10
+thermo_style custom step pe lx ly lz press pxx pyy pzz c_eatoms
+
+dump 1 all cfg 10 Al_fcc.*.cfg mass type xs ys zs
+dump_modify 1 element Al
+
+min_style cg
+minimize 1e-25 1e-25 5000 10000
+
+variable E equal "c_eatoms"
+variable N equal count(all)
+variable E_cohesive equal ${E}/${N}
+print "Lattice parameter : ${a} "
+print "Cohesive Energy : ${E_cohesive}"
+print "${a} ${E_cohesive}" append LatfccAl.txt
+
+clear
+next   k
+jump   Al_input.txt
